@@ -44,7 +44,7 @@ parse (char *buf, Command *c)
 
 newcmd: //"jump" from 'goto newcmd' (CASE: PIPE)
   if ((n = acmd(t, &cmd0)) <= 0) {
-    return -1;
+    return -1; /* -1 means that program is returning error */
   }
 
   t += n;
@@ -60,11 +60,11 @@ newtoken: //"jump" from 'goto newtoken' (CASE: RIN)
   t += n;
 
   switch(*tok) {
-  case PIPE:
-    goto newcmd;
+  case PIPE: /* if the command (passed by the user) contains '|', then:   */
+    goto newcmd; //jump to newcmd
     break;
-  case BG:
-    n = nexttoken(t, &tok);
+  case BG: /* if the command (passed by the user) contains '&', then:     */
+    n = nexttoken(t, &tok); /* nexttoken is defined further down */
     if (n == 0) {
       c->bakground = 1;
       return 1;
@@ -74,7 +74,7 @@ newtoken: //"jump" from 'goto newtoken' (CASE: RIN)
       return -1;
     }
     break;
-  case RIN:
+  case RIN: /* '<' */
     if (c->rstdin != NULL) {
       fprintf(stderr, "duplicate redirection of stdin\n");
       return -1;
@@ -89,7 +89,7 @@ newtoken: //"jump" from 'goto newtoken' (CASE: RIN)
     t += n;
     goto newtoken;
     break;
-  case RUT:
+  case RUT: /* '>' */
     if (c->rstdout != NULL) {
       fprintf(stderr, "duplicate redirection of stdout\n");
       return -1;
@@ -102,12 +102,12 @@ newtoken: //"jump" from 'goto newtoken' (CASE: RIN)
       return -1;
     }
     t += n;
-    goto newtoken;
+    goto newtoken; /*jump to newtoken*/
     break;
-  default:
+  default: /*if tok doesn't point to any of the given cases, then: */
     return -1;
   }
-  goto newcmd;
+  goto newcmd; /*jump to newcmd*/
 }
 
 void init( void )
