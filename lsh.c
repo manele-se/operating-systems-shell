@@ -63,16 +63,19 @@ int main(void)
        */
       stripwhite(line); /* stripwhite is defined further done*/
 
-      if(*line) { 
-        add_history(line);
+      if(*line) {
+        add_history(line); /*If you want the user to be able to get at the
+                            * line later, (with C-p for example), you must
+                            * call add_history() to save the line away in
+                            * a history list of such lines. */
         /* execute it */
-        n = parse(line, &cmd);
+        n = parse(line, &cmd); /*parse is defined in parse.c */
         PrintCommand(n, &cmd);
       }
     }
 
     if(line) {
-      free(line);
+      free(line); /* deallocates the memory previously allocated by a call to calloc, malloc, or realloc.*/
     }
   }
   return 0;

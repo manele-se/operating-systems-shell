@@ -1,5 +1,5 @@
 /* This file contains the code for parser used to parse the input
- * given to shell program. You shouldn't need to modify this 
+ * given to shell program. You shouldn't need to modify this
  * file */
 
 #include <stdio.h>
@@ -36,13 +36,13 @@ parse (char *buf, Command *c)
   char *tok;
 
   init();
-  c->rstdin    = NULL;
+  c->rstdin    = NULL; //assign NULL to the address that c points to (in this case rstdin)
   c->rstdout   = NULL;
   c->rstderr   = NULL;
   c->bakground = 0; /* false */
   c->pgm       = NULL;
 
-newcmd:
+newcmd: //"jump" from 'goto newcmd' (CASE: PIPE)
   if ((n = acmd(t, &cmd0)) <= 0) {
     return -1;
   }
@@ -52,7 +52,7 @@ newcmd:
   cmd0->next = c->pgm;
   c->pgm = cmd0;
 
-newtoken:
+newtoken: //"jump" from 'goto newtoken' (CASE: RIN)
   n = nexttoken(t, &tok);
   if (n == 0) {
     return 1;
