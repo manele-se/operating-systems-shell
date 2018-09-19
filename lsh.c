@@ -1,8 +1,8 @@
-/* 
+/*
  * Main source code file for lsh shell program
  *
  * You are free to add functions to this file.
- * If you want to add functions in a separate file 
+ * If you want to add functions in a separate file
  * you will need to modify Makefile to compile
  * your additional functions.
  *
@@ -10,10 +10,10 @@
  * easier for us while grading your assignment.
  *
  * Submit the entire lab1 folder as a tar archive (.tgz).
- * Command to create submission archive: 
+ * Command to create submission archive:
       $> tar cvf lab1.tgz lab1/
  *
- * All the best 
+ * All the best
  */
 
 
@@ -26,7 +26,6 @@
 /*
  * Function declarations
  */
-
 void PrintCommand(int, Command *);
 void PrintPgm(Pgm *);
 void stripwhite(char *);
@@ -48,11 +47,13 @@ int main(void)
   while (!done) {
 
     char *line;
-    line = readline("> ");
+    line = readline("> "); /* readline prints a prompt prompt and then reads
+                            * and returns a single line of text from the user
+                            * that is stored in 'line' */
 
-    if (!line) {
+    if (!line) { /* If we've reached the end of the line */
       /* Encountered EOF at top level */
-      done = 1;
+      done = 1; /*Set done to 1 (true) --> stop the while loop */
     }
     else {
       /*
@@ -60,16 +61,16 @@ int main(void)
        * Then, if there is anything left, add it to the history list
        * and execute it.
        */
-      stripwhite(line);
+      stripwhite(line); /* stripwhite is defined further done*/
 
-      if(*line) {
+      if(*line) { 
         add_history(line);
         /* execute it */
         n = parse(line, &cmd);
         PrintCommand(n, &cmd);
       }
     }
-    
+
     if(line) {
       free(line);
     }
@@ -125,20 +126,24 @@ PrintPgm (Pgm *p)
  *
  * Description: Strip whitespace from the start and end of STRING.
  */
-void
-stripwhite (char *string)
+void stripwhite (char *string)
 {
   register int i = 0;
 
-  while (isspace( string[i] )) {
+  while (isspace( string[i] )) { /* isspace(int c) checks whether the passed character
+                                  * is white-space. This function returns a non-zero
+                                  * value(true) if c is a white-space character
+                                  * else, zero (false) */
+
+
     i++;
   }
-  
+
   if (i) {
-    strcpy (string, string + i);
+    strcpy (string, string + i); /* copies string pointed to by source (right argument) into the destination (left argument) */
   }
 
-  i = strlen( string ) - 1;
+  i = strlen( string ) - 1; /*returns the length of the string passed as an argument and stores it in i*/
   while (i> 0 && isspace (string[i])) {
     i--;
   }
