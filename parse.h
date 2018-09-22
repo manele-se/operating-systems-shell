@@ -1,6 +1,6 @@
 
 /*
- * info om varje program. Det finns en variabel pgmlist som är array of strängar. Där den försata elementet är
+ * Structen innehåller info om varje program. Det finns en variabel pgmlist som är array of strängar. Där den försata elementet är
  * namnet på programmet och den andra är argumentet till praogrammet. Testat detta igenom att skriva t.ex ls på shellen
  * Det visas stdin: <none>   --> jag redirectar inte stdin  
  *           stdout:<none>   --> jag redirectar inte stdout
