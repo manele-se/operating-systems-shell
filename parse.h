@@ -10,6 +10,14 @@
  * testa med cat < abdc > def & -> vi starta programmet cat som läser från en fil  abdc , allt utskrift kommer till en annan 
  * fil som heter def och programmet startar i bakgrunden. VI vet att det funkar eftersom printCommand skriver ut rätt sak på rät plats. 
  * Vi behöver inte skriva kod för att parsa!!! (good news!)
+ * PIPES: testa a | b| c -->output från a blir input till b och output från tas in som input från cp
+ * Som resultat får vi  [a]
+ *                      [b]
+ *                      [c]
+ * men titta på printPgm funktionen i lsh.c filen. Den skriver ut rekursivt först resten av lista och sen 
+ * skriv ut första programmet i listan. Detta betyder att cmd->pgm pekar på den sista i pipe. 
+ * KONKRET: det är programmet som är sist i kedjan som ska ge sitt stdout till den näst sista programmet stdin. 
+ * Det får vi tänka på när vi skriver koden för att starta de programmen i pipe.
  */
 typedef struct c {
   char **pgmlist;
