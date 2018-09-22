@@ -1,5 +1,5 @@
 /* This file contains the code for parser used to parse the input
- * given to shell program. You shouldn't need to modify this
+ * given to shell program. You shouldn't need to modify this 
  * file */
 
 #include <stdio.h>
@@ -26,25 +26,46 @@ static char *pbuf[50], **pp;
  * A quick hack to parse a commandline
  */
 
+/* Läser från en sträng (buf) som är kommandoraden
+ * Fyller på en struct Command med information om kommandoraden
+ */
+
 int
 parse (char *buf, Command *c)
 {
   int n;
+
+  /* Pekare till en struct Pgm
+   * Varje Pgm ("program") som ska köras
+   * Till exempel "ls -l" blir ETT "program"
+   */
   Pgm *cmd0;
 
+  /* t är en pekare som troligen används för att gå "framåt" i strängen och tolka innehållet */
   char *t = buf;
+  /* tok ingen aning vad det kan vara ännu */
   char *tok;
 
   init();
-  c->rstdin    = NULL; //assign NULL to the address that c points to (in this case rstdin)
+  /* Ställer in "standard" värde för:
+   * rstdin  (redirect standard input)  = NULL (ingen redirect)
+   * rstdout (redirect standard output)
+   * rstderr (redirect standard error)
+   * bakground (starta som bakgrundsprocess)
+   * pgm     (program att starta)
+   */
+  c->rstdin    = NULL;
   c->rstdout   = NULL;
   c->rstderr   = NULL;
   c->bakground = 0; /* false */
   c->pgm       = NULL;
 
-newcmd: //"jump" from 'goto newcmd' (CASE: PIPE)
+/* vi pratar om det sen - det här är GAMMAL stil av programmering
+ * man kan bryta mot reglerna för loopar, if- och switch-satser genom goto
+ */
+newcmd:
   if ((n = acmd(t, &cmd0)) <= 0) {
-    return -1; /* -1 means that program is returning error */
+    return -1;
   }
 
   t += n;
@@ -52,7 +73,7 @@ newcmd: //"jump" from 'goto newcmd' (CASE: PIPE)
   cmd0->next = c->pgm;
   c->pgm = cmd0;
 
-newtoken: //"jump" from 'goto newtoken' (CASE: RIN)
+newtoken:
   n = nexttoken(t, &tok);
   if (n == 0) {
     return 1;
@@ -60,11 +81,11 @@ newtoken: //"jump" from 'goto newtoken' (CASE: RIN)
   t += n;
 
   switch(*tok) {
-  case PIPE: /* if the command (passed by the user) contains '|', then:   */
-    goto newcmd; //jump to newcmd
+  case PIPE:
+    goto newcmd;
     break;
-  case BG: /* if the command (passed by the user) contains '&', then:     */
-    n = nexttoken(t, &tok); /* nexttoken is defined further down */
+  case BG:
+    n = nexttoken(t, &tok);
     if (n == 0) {
       c->bakground = 1;
       return 1;
@@ -74,7 +95,7 @@ newtoken: //"jump" from 'goto newtoken' (CASE: RIN)
       return -1;
     }
     break;
-  case RIN: /* '<' */
+  case RIN:
     if (c->rstdin != NULL) {
       fprintf(stderr, "duplicate redirection of stdin\n");
       return -1;
@@ -89,7 +110,7 @@ newtoken: //"jump" from 'goto newtoken' (CASE: RIN)
     t += n;
     goto newtoken;
     break;
-  case RUT: /* '>' */
+  case RUT:
     if (c->rstdout != NULL) {
       fprintf(stderr, "duplicate redirection of stdout\n");
       return -1;
@@ -102,24 +123,36 @@ newtoken: //"jump" from 'goto newtoken' (CASE: RIN)
       return -1;
     }
     t += n;
-    goto newtoken; /*jump to newtoken*/
+    goto newtoken;
     break;
-  default: /*if tok doesn't point to any of the given cases, then: */
+  default:
     return -1;
   }
-  goto newcmd; /*jump to newcmd*/
+  goto newcmd;
 }
 
 void init( void )
 {
   int i;
+  /* Initierar en array av 19 struct Pgm i en array */
+  /* Så att cmbbuf[0].next pekar på cmbbuf[1],
+            cmbbuf[1].next pekar på cmbbuf[2],
+            cmbbuf[2].next pekar på cmbbuf[3],
+            ...
+            cmbbuf[18].next pekar på cmbbuf[19]
+            */
   for (i=0;i<19;i++) {
     cmdbuf[i].next = &cmdbuf[i+1];
   }
+
+  /* Den sista cmbbuf[19].next pekar på ingenting
+   * Det brukar signalera att det inte finns någon "nästa" härifrån
+   */
   cmdbuf[19].next = NULL;
+
   cmds = cmdbuf;
-  cp = cbuf;
-  pp = pbuf;
+  cp = cbuf; /* ??? */
+  pp = pbuf; /* ??? */
 }
 
 int
