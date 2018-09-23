@@ -182,7 +182,7 @@ void PrintPgm (Pgm *p)
     /*get a copy of the PATH variable*/
     char *path = getenv("PATH"); 
     char *all_path = strdup(path);
-    char  buff [MAX_SIZE]; 
+    char  full_path [MAX_SIZE]; 
 
     /* get the program name*/ 
     char *program_name = pl[0]; 
@@ -193,11 +193,23 @@ void PrintPgm (Pgm *p)
     
     /* as long as there are more path to look in and program is not found*/
     while (dir != NULL && !found) {
-	    snprintf(buff, MAX_SIZE, "%s/%s", dir, program_name); 
+	    snprintf(full_path, MAX_SIZE, "%s/%s", dir, program_name); 
 
       /*if file exists print its location*/
-	    if(access(buff, F_OK) != -1) {
-		    printf("Program found at : %s\n", buff); 
+	    if(access(full_path, F_OK) != -1) {
+		    /*printf("Program found at : %s\n", buff); ATT TA BORT!!!*/
+        pid_t pid = fork(); 
+        if(pid < 0){
+          fprintf(stderr, "Fork failed"); 
+          return; 
+        }
+        else if(pid ==0){
+          /*execute a program*/
+          execlp(full_path,program_name, NULL); 
+        }
+        else{
+          wait(NULL); 
+        }
 		    found = TRUE; 
       }
 
