@@ -201,7 +201,7 @@ void PrintPgm (Pgm *p)
 		    found = TRUE; 
       }
 
-      path = strtok (NULL, ":") ;
+      dir = strtok (NULL, ":") ;
     }
     if (! found){
       printf("Command not found: %s\n", program_name); 
