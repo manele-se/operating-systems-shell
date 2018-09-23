@@ -205,7 +205,8 @@ void PrintPgm (Pgm *p)
         }
         else if(pid ==0){
           /*execute a program*/
-          execlp(full_path,program_name, NULL); 
+          /* ATT TA BORT: execlp(full_path,program_name, NULL); */
+          execvp(full_path, pl); 
         }
         else{
           wait(NULL); 
