@@ -175,7 +175,7 @@ void PrintPgm (Pgm *p)
      */
     PrintPgm(p->next);
     /*get a copy of the PATH variable*/
-    char *path = getenv(“PATH”); 
+    char *path = getenv("PATH"); 
     char *all_path = strdup(path);
     char  buff [1024]; 
 
@@ -183,20 +183,20 @@ void PrintPgm (Pgm *p)
     char *program_name = pl[0]; 
 
     /*tokanize */ 
-    char *dir = strtok(all_path, “:”);   
+    char *dir = strtok(all_path, ":");   
     int found = FALSE; 
     
     /* as long as there are more path to look in and program is not found*/
     while (dir != NULL && !found) {
-	    snprintf(buff, 1024, “%s/%s”, dir, program_name); 
+	    snprintf(buff, 1024, "%s/%s", dir, program_name); 
 
       /*if file exists print its location*/
 	    if(access(buff, F_OK) != -1) {
-		    printf(“Program found at : %s\n”, buff); 
+		    printf("Program found at : %s\n", buff); 
 		    found = TRUE; 
       }
 
-      path = strtok (NULL, “:”) ;
+      path = strtok (NULL, ":") ;
     }
     if (! found){
       printf("Command not found: %s\n", program_name); 
