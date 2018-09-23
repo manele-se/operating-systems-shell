@@ -26,7 +26,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "parse.h"
-
+#include <unistd.h>
+#include <string.h>
 /*
  * Function declarations
  */
