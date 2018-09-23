@@ -18,6 +18,7 @@
 
 /*
  * Elena Marzi and Johannes Magnusson 
+ * 2018-09-? 
  */
  
 #include <stdio.h>
@@ -173,11 +174,34 @@ void PrintPgm (Pgm *p)
      *  printing example: [wc -l]
      */
     PrintPgm(p->next);
-    printf("    [");
-    while (*pl) {
-      printf("%s ", *pl++);
+    /*get a copy of the PATH variable*/
+    char *path = getenv(“PATH”); 
+    char *all_path = strdup(path);
+    char  buff [1024]; 
+
+    /* get the program name*/ 
+    char *program_name = pl[0]; 
+
+    /*tokanize */ 
+    char *dir = strtok(all_path, “:”);   
+    int found = FALSE; 
+    
+    /* as long as there are more path to look in and program is not found*/
+    while (dir != NULL && !found) {
+	    snprintf(buff, 1024, “%s/%s”, dir, program_name); 
+
+      /*if file exists print its location*/
+	    if(access(buff, F_OK) != -1) {
+		    printf(“Program found at : %s\n”, buff); 
+		    found = TRUE; 
+      }
+
+      path = strtok (NULL, “:”) ;
     }
-    printf("]\n");
+    if (! found){
+      printf("Command not found: %s\n", program_name); 
+    }
+    free(all_path); 
   }
 }
 
