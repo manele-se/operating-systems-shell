@@ -28,6 +28,10 @@
 #include "parse.h"
 #include <unistd.h>
 #include <string.h>
+
+#define TRUE 1 
+#define FALSE 0 
+#define MAX_SIZE 1024 
 /*
  * Function declarations
  */
@@ -178,7 +182,7 @@ void PrintPgm (Pgm *p)
     /*get a copy of the PATH variable*/
     char *path = getenv("PATH"); 
     char *all_path = strdup(path);
-    char  buff [1024]; 
+    char  buff [MAX_SIZE]; 
 
     /* get the program name*/ 
     char *program_name = pl[0]; 
@@ -189,7 +193,7 @@ void PrintPgm (Pgm *p)
     
     /* as long as there are more path to look in and program is not found*/
     while (dir != NULL && !found) {
-	    snprintf(buff, 1024, "%s/%s", dir, program_name); 
+	    snprintf(buff, MAX_SIZE, "%s/%s", dir, program_name); 
 
       /*if file exists print its location*/
 	    if(access(buff, F_OK) != -1) {
