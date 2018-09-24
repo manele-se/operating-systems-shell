@@ -36,7 +36,7 @@
  * Function declarations
  */
 void PrintCommand(int, Command *);
-void PrintPgm(Pgm *);
+void PrintPgm(Pgm *, int *pipe_fd);
 void stripwhite(char *);
 
 /* When non-zero (true), this global means the user is done using this program. */
@@ -149,10 +149,13 @@ void PrintCommand (int n, Command *cmd)
 /*
  * Name: PrintPgm
  *
- * Description: Prints a list of Pgm:s. It takes a pointer to a program and print the details about it 
+ * Description: Runs a list of Pgm:s.
+ * It takes a pointer to a program and runs it.
+ * Funktionen tar också en pipe (två integers)
+ * Om pipe är NULL är detta "sista" programmet i pipe-kedjan.
  *
  */
-void PrintPgm (Pgm *p)
+void PrintPgm (Pgm *p, int *pipe_fd)
 {
   /*
    *  if there is no information about the program, do nothing
@@ -178,7 +181,22 @@ void PrintPgm (Pgm *p)
      * (it is like a postorder print is a tree: first print all the rest of the list recurively then print myself)
      *  printing example: [wc -l]
      */
-    PrintPgm(p->next);
+    
+    /* If there is a program to run before this in the pipe chain,
+     * create a new pipe and give it to the program to run before this
+     */
+    int *next_pipe = NULL;
+    int new_pipe[2];
+
+    if (p->next != NULL) {
+      if (pipe(new_pipe) == -1) {
+        fprintf(stderr, "Pipe creation failed!");
+        return;
+      }
+      next_pipe = new_pipe;
+      PrintPgm(p->next, next_pipe);
+    }
+
     /*get a copy of the PATH variable*/
     char *path = getenv("PATH"); 
     char *all_path = strdup(path);
@@ -203,7 +221,23 @@ void PrintPgm (Pgm *p)
           fprintf(stderr, "Fork failed"); 
           return; 
         }
-        else if(pid ==0){
+        else if(pid ==0) {
+          /* Redirect stdout, if a pipe was sent in from the outside */
+          if (pipe_fd != NULL) {
+            close(STDOUT_FILENO);       // Close stdout
+            dup(pipe_fd[WRITE_END]);    // Replace stdout with a copy of the received pipe
+            close(pipe_fd[WRITE_END]);  // Close the pipe
+            close(pipe_fd[READ_END]);
+          }
+
+          /* Redirect stdin, if a new pipe was sent to the program before this */
+          if (next_pipe != NULL) {
+            close(STDIN_FILENO);        // Close stdin
+            dup(next_pipe[READ_END]);     // Replace stdin with a copy of the new pipe
+            close(next_pipe[WRITE_END]);  // Close the pipe
+            close(next_pipe[READ_END]);
+          }
+
           /*execute a program*/
           /* ATT TA BORT: execlp(full_path,program_name, NULL); */
           execvp(full_path, pl); 
@@ -219,7 +253,13 @@ void PrintPgm (Pgm *p)
     if (! found){
       printf("Command not found: %s\n", program_name); 
     }
-    free(all_path); 
+    free(all_path);
+
+    /* If we have created a new pipe, close it! */
+    if (next_pipe != NULL) {
+      close(next_pipe[0]);
+      close(next_pipe[1]);
+    }
   }
 }
 
