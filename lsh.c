@@ -31,7 +31,10 @@
 
 #define TRUE 1 
 #define FALSE 0 
-#define MAX_SIZE 1024 
+#define MAX_SIZE 1024
+#define READ_END 0
+#define WRITE_END 1
+
 /*
  * Function declarations
  */
@@ -143,7 +146,7 @@ void PrintCommand (int n, Command *cmd)
   /*
    * this prints all programs and arguments to run and pipe together
    */
-  PrintPgm(cmd->pgm);
+  PrintPgm(cmd->pgm, NULL);
 }
 
 /*
