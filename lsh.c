@@ -229,8 +229,8 @@ void PrintPgm (Pgm *p, int *pipe_fd)
           if (pipe_fd != NULL) {
             close(STDOUT_FILENO);       // Close stdout
             dup(pipe_fd[WRITE_END]);    // Replace stdout with a copy of the received pipe
-            close(pipe_fd[WRITE_END]);  // Close the pipe
-            close(pipe_fd[READ_END]);
+            close(pipe_fd[READ_END]);   // Close the pipe
+            close(pipe_fd[WRITE_END]);
           }
 
           /* Redirect stdin, if a new pipe was sent to the program before this */
@@ -246,6 +246,11 @@ void PrintPgm (Pgm *p, int *pipe_fd)
           execvp(full_path, pl); 
         }
         else{
+          /* If we have created a new pipe, close it! */
+          if (next_pipe != NULL) {
+            close(next_pipe[0]);
+            close(next_pipe[1]);
+          }
           wait(NULL); 
         }
 		    found = TRUE; 
@@ -258,11 +263,7 @@ void PrintPgm (Pgm *p, int *pipe_fd)
     }
     free(all_path);
 
-    /* If we have created a new pipe, close it! */
-    if (next_pipe != NULL) {
-      close(next_pipe[0]);
-      close(next_pipe[1]);
-    }
+    
   }
 }
 
