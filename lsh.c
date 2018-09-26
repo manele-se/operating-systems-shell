@@ -39,7 +39,7 @@
  * Function declarations
  */
 void PrintCommand(int, Command *);
-void PrintPgm(Pgm *, int *pipe_fd);
+void PrintPgm(Pgm *, int *pipe_right, Command *cmd);
 void stripwhite(char *);
 
 /* When non-zero (true), this global means the user is done using this program. */
@@ -146,7 +146,7 @@ void PrintCommand (int n, Command *cmd)
   /*
    * this prints all programs and arguments to run and pipe together
    */
-  PrintPgm(cmd->pgm, NULL);
+  PrintPgm(cmd->pgm, NULL, cmd);
 }
 
 /*
@@ -158,7 +158,7 @@ void PrintCommand (int n, Command *cmd)
  * Om pipe är NULL är detta "sista" programmet i pipe-kedjan.
  *
  */
-void PrintPgm (Pgm *p, int *pipe_fd)
+void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
 {
   /*
    *  if there is no information about the program, do nothing
@@ -223,14 +223,20 @@ void PrintPgm (Pgm *p, int *pipe_fd)
         if(pid < 0){
           fprintf(stderr, "Fork failed"); 
           return; 
-        }
+        }/*if this is the child process*/
         else if(pid ==0) {
-          /* Redirect stdout, if a pipe was sent in from the outside */
-          if (pipe_fd != NULL) {
+          if (pipe_right != NULL) {
+            /* Redirect stdout, if a pipe was sent in from the outside */
             close(STDOUT_FILENO);       // Close stdout
-            dup(pipe_fd[WRITE_END]);    // Replace stdout with a copy of the received pipe
-            close(pipe_fd[READ_END]);   // Close the pipe
-            close(pipe_fd[WRITE_END]);
+            dup(pipe_right[WRITE_END]);    // Replace stdout with a copy of the received pipe
+            close(pipe_right[READ_END]);   // Close the pipe
+            close(pipe_right[WRITE_END]);
+          }
+          else if (cmd->rstdout != NULL) {
+            /* Redirect stdout if this is the program to the right and if a filename was given */
+            int redirect_stdout = open(cmd->rstdout, O_WRONLY | O_TRUNC | O_CREAT);
+            dup2(redirect_stdout, 1);
+            close(redirect_stdout);
           }
 
           /* Redirect stdin, if a new pipe was sent to the program before this */
