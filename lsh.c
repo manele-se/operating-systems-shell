@@ -237,6 +237,11 @@ void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
           else if (cmd->rstdout != NULL) {
             /* Redirect stdout if this is the program to the right and if a filename was given */
             int redirect_stdout = open(cmd->rstdout, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
+            /* If file could not be created or opened for writing */
+            if (redirect_stdout == -1) {
+              fprintf(stderr, "Could not write to file %s\n", cmd->rstdout);
+              return;
+            }
             dup2(redirect_stdout, 1);
             close(redirect_stdout);
           }
