@@ -28,6 +28,8 @@
 #include "parse.h"
 #include <unistd.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define TRUE 1 
 #define FALSE 0 
@@ -197,7 +199,7 @@ void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
         return;
       }
       next_pipe = new_pipe;
-      PrintPgm(p->next, next_pipe);
+      PrintPgm(p->next, next_pipe, cmd);
     }
 
     /*get a copy of the PATH variable*/
