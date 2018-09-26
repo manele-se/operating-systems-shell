@@ -190,7 +190,7 @@ void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
     /* If there is a program to run before this in the pipe chain,
      * create a new pipe and give it to the program to run before this
      */
-    int *next_pipe = NULL;
+    int *pipe_left = NULL;
     int new_pipe[2];
 
     if (p->next != NULL) {
@@ -198,8 +198,8 @@ void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
         fprintf(stderr, "Pipe creation failed!");
         return;
       }
-      next_pipe = new_pipe;
-      PrintPgm(p->next, next_pipe, cmd);
+      pipe_left = new_pipe;
+      PrintPgm(p->next, pipe_left, cmd);
     }
 
     /*get a copy of the PATH variable*/
@@ -246,23 +246,33 @@ void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
             close(redirect_stdout);
           }
 
-          /* Redirect stdin, if a new pipe was sent to the program before this */
-          if (next_pipe != NULL) {
+          if (pipe_left != NULL) {
+            /* Redirect stdin, if a new pipe was sent to the program before this */
             close(STDIN_FILENO);        // Close stdin
-            dup(next_pipe[READ_END]);     // Replace stdin with a copy of the new pipe
-            close(next_pipe[WRITE_END]);  // Close the pipe
-            close(next_pipe[READ_END]);
+            dup(pipe_left[READ_END]);     // Replace stdin with a copy of the new pipe
+            close(pipe_left[WRITE_END]);  // Close the pipe
+            close(pipe_left[READ_END]);
+          }
+          else if (cmd->rstdin != NULL) {
+            /* Redirect stdin if this is the program to the left and if a filename was given */
+            int redirect_stdin = open(cmd->rstdin, O_RDONLY);
+            /* If file could not be created or opened for writing */
+            if (redirect_stdin == -1) {
+              fprintf(stderr, "Could not read from file %s\n", cmd->rstdin);
+              return;
+            }
+            dup2(redirect_stdin, 0);
+            close(redirect_stdin);
           }
 
           /*execute a program*/
-          /* ATT TA BORT: execlp(full_path,program_name, NULL); */
           execvp(full_path, pl); 
         }
         else{
           /* If we have created a new pipe, close it! */
-          if (next_pipe != NULL) {
-            close(next_pipe[0]);
-            close(next_pipe[1]);
+          if (pipe_left != NULL) {
+            close(pipe_left[0]);
+            close(pipe_left[1]);
           }
           wait(NULL); 
         }
