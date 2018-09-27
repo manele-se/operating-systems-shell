@@ -126,10 +126,11 @@ int main(void)
          */
         n = parse(line, &cmd);
 
-//Test
-if (strcmp(cmd.pgm->pgmlist[0], "exit") == 0) { 
-        kill(0, SIGKILL);
-        exit(0);
+/*The build in function 'exit'*/
+if (strcmp(cmd.pgm->pgmlist[0], "exit") == 0) { /*Checks if the first argument is equal to the string 'exit' */
+        kill(0, SIGKILL); /*If pid (1st argument) is equals 0, then sig (2nd argument) is sent to every process in the process group
+                            of the calling process. The SIGKILL signal is used to cause immediate program termination */
+        exit(0); /*Arg: status code. 0 -> execution succeeded completely   *
 }
 
 
