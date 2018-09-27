@@ -39,7 +39,7 @@
  * Function declarations
  */
 void PrintCommand(int, Command *);
-void PrintPgm(Pgm *, int *pipe_fd, Command *cmd);
+void RunPgm(Pgm *, int *pipe_fd, Command *cmd);
 void stripwhite(char *);
 
 /* When non-zero (true), this global means the user is done using this program. */
@@ -146,7 +146,7 @@ void PrintCommand (int n, Command *cmd)
   /*
    * this prints all programs and arguments to run and pipe together
    */
-  PrintPgm(cmd->pgm, NULL, NULL);
+  RunPgm(cmd->pgm, NULL, NULL);
 }
 
 /*
@@ -158,7 +158,7 @@ void PrintCommand (int n, Command *cmd)
  * Om pipe är NULL är detta "sista" programmet i pipe-kedjan.
  *
  */
-void PrintPgm (Pgm *p, int *pipe_fd, Command *cmd)
+void RunPgm (Pgm *p, int *pipe_fd, Command *cmd)
 {
   /*
    *  if there is no information about the program, do nothing
@@ -197,7 +197,7 @@ void PrintPgm (Pgm *p, int *pipe_fd, Command *cmd)
         return;
       }
       next_pipe = new_pipe;
-      PrintPgm(p->next, next_pipe, NULL);
+      RunPgm(p->next, next_pipe, NULL);
     }
 
     /*get a copy of the PATH variable*/
