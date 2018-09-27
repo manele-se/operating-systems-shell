@@ -243,13 +243,22 @@ void RunPgm (Pgm *p, int *pipe_fd, Command *cmd)
             close(next_pipe[READ_END]);
           }
 
+
+          /*if(!(cmd->bakground)){
+            waitpid(pid, NULL, 0);
+          }*/
+
+
           /*execute a program*/
           /* ATT TA BORT: execlp(full_path,program_name, NULL); */
           execvp(full_path, pl);
+
+
+
         }
         else{
 
-          if(!(cmd->bakground))wait(NULL);
+
 
           /* If we have created a new pipe, close it! */
           if (next_pipe != NULL) {
@@ -257,7 +266,15 @@ void RunPgm (Pgm *p, int *pipe_fd, Command *cmd)
             close(next_pipe[1]);
           }
 
-        }
+            if (!cmd->bakground){
+                wait(NULL);
+            }
+
+
+
+          }
+
+
 		    found = TRUE;
       }
 
