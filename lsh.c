@@ -273,8 +273,10 @@ void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
           if (pipe_left != NULL) {
             close(pipe_left[0]);
             close(pipe_left[1]);
+          /*check if background task*/
+          } if (!cmd->bakground){ 
+              wait(NULL); 
           }
-          wait(NULL); 
         }
 		    found = TRUE; 
       }
