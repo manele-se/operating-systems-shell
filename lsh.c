@@ -47,6 +47,7 @@ void PrintCommand(int, Command *);
 void PrintPgm(Pgm *, int *pipe_right, Command *cmd);
 void stripwhite(char *);
 void child_terminated();
+void run_cd(char *);
 
 /* When non-zero (true), this global means the user is done using this program. */
 int done = 0;
@@ -190,6 +191,18 @@ void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
      * takes the pgm part of the command strunct and sent it to printPgm. 
      */
     char **pl = p->pgmlist;
+
+    /* Check to see if user wants to run a built in command here
+     * We can't do this earlier because this is where we get
+     * the program name and arguments (the pl array)
+     * We can't do this later because built in commands should
+     * not be handling pipes, redirection, background ...
+     */
+    if (strcmp("cd", pl[0]) == 0) {
+      /*run the built in command cd, and pass the first parameter */
+      run_cd(pl[1]);
+      return;
+    }
 
     /* The list is in reversed order (I don't know why- design choice) so print
      * it reversed to get right.
@@ -380,4 +393,25 @@ void child_terminated() {
         fprintf(stdout, "Process %d exited\n", pid);
       }
     } while (pid > 0);
+}
+
+/*
+ * Name: run_cd
+ * 
+ * The built in command cd
+ */
+void run_cd(char *directory) {
+  if (directory == NULL) {
+    /* cd without an arguments changes directory to the user's HOME directory */
+    chdir(getenv("HOME"));
+  }
+  else {
+    /* try to change current directory */
+    int result = chdir(directory);
+
+    if (result == -1) {
+      /* something went wrong */
+      fprintf(stderr, "Could not change directory to \"%s\"\n", directory);
+    }
+  }
 }
