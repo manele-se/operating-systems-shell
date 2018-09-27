@@ -30,6 +30,9 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <sys/resource.h>
 
 #define TRUE 1 
 #define FALSE 0 
@@ -43,6 +46,7 @@
 void PrintCommand(int, Command *);
 void PrintPgm(Pgm *, int *pipe_right, Command *cmd);
 void stripwhite(char *);
+void child_terminated();
 
 /* When non-zero (true), this global means the user is done using this program. */
 int done = 0;
@@ -58,6 +62,13 @@ int main(void)
    */
   Command cmd; 
   int n;
+
+  /*
+   * Register a callback function to be called automatically each
+   * time a child process terminates. This allows us to immediatley
+   * clean up the child process to avoid zombies
+   */
+  signal(SIGCHLD, child_terminated);
 
   /*
    * this lopp is the main loop in the program. It runs until the user wants to quit the shell
@@ -274,7 +285,8 @@ void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
             close(pipe_left[0]);
             close(pipe_left[1]);
           /*check if background task*/
-          } if (!cmd->bakground){ 
+          }
+          if (!cmd->bakground){ 
               wait(NULL); 
           }
         }
@@ -339,4 +351,33 @@ void stripwhite (char *string)
   * i increased by 1 and set an string terminator in that position  
   */ 
   string [++i] = '\0';
+}
+
+
+/*
+ * Name: child_terminated
+ * 
+ * Is called automatically each time a child process terminates
+ */
+void child_terminated() {
+		int exit_status;
+    pid_t pid;
+
+    /* 
+     * loop as long as it finds more terminated child processes
+     */
+    do {
+      /*
+       * Check if there is a child process that is terminated
+       */
+      pid = wait3(&exit_status, WNOHANG, NULL);
+
+      if (pid > 0) {
+        /*
+         * Here we could also print the exit code which
+         * is in some 8 bits of the exit_status
+         */
+        fprintf(stdout, "Process %d exited\n", pid);
+      }
+    } while (pid > 0);
 }
