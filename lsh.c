@@ -43,8 +43,8 @@
 /*
  * Function declarations
  */
-void PrintCommand(int, Command *);
-void PrintPgm(Pgm *, int *pipe_right, Command *cmd);
+void RunCommand(int, Command *);
+void RunPgm(Pgm *, int *pipe_right, Command *cmd);
 void stripwhite(char *);
 void child_terminated();
 void ctrl_c_pressed();
@@ -143,7 +143,7 @@ if (strcmp(cmd.pgm->pgmlist[0], "exit") == 0) { /*Checks if the first argument i
 
 
 
-        PrintCommand(n, &cmd);
+        RunCommand(n, &cmd);
       }
     }
 
@@ -160,29 +160,21 @@ if (strcmp(cmd.pgm->pgmlist[0], "exit") == 0) { /*Checks if the first argument i
 }
 
 /*
- * Name: PrintCommand
+ * Name: RunCommand
  *
- * Description: Prints a Command structure as returned by parse on stdout.
+ * Description: Runs a Command structure as returned by parse on stdout.
  *
  */
-void PrintCommand (int n, Command *cmd)
+void RunCommand (int n, Command *cmd)
 {
-  printf("Parse returned %d:\n", n);
-  /* ? : => it means: if  cmd->rstdin is NOT NULL or 0, use cmd->rstdin, otherwise use "<none>"
-  * Those ternary expressions are one argument to the printf function. %s will show the result
-  *  of the ternary expression on the screen
-  */
-  printf("   stdin : %s\n", (cmd->rstdin  ? cmd->rstdin  : "<none>") );
-  printf("   stdout: %s\n", (cmd->rstdout ? cmd->rstdout : "<none>") );
-  printf("   bg    : %s\n", (cmd->bakground ? "yes" : "no"));
   /*
-   * this prints all programs and arguments to run and pipe together
+   * this runs all programs and arguments to run and pipe together
    */
-  PrintPgm(cmd->pgm, NULL, cmd);
+  RunPgm(cmd->pgm, NULL, cmd);
 }
 
 /*
- * Name: PrintPgm
+ * Name: RunPgm
  *
  * Description: Runs a list of Pgm:s.
  * It takes a pointer to a program and runs it.
@@ -190,7 +182,7 @@ void PrintCommand (int n, Command *cmd)
  * Om pipe är NULL är detta "sista" programmet i pipe-kedjan.
  *
  */
-void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
+void RunPgm (Pgm *p, int *pipe_right, Command *cmd)
 {
   /*
    *  if there is no information about the program, do nothing
@@ -205,8 +197,8 @@ void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
      * (!! in C a string is an pointer to the first charater to the string  that it means that
      * there is an array in which each element is pointer to a char, this is why there is dubbelpointer
      * -->char * * is like a String[] in Java)
-     * p->pgmlist:  is that array given by the parse function. Parser fills the command struct, printCommand
-     * takes the pgm part of the command strunct and sent it to printPgm.
+     * p->pgmlist:  is that array given by the parse function. Parser fills the command struct, RunCommand
+     * takes the pgm part of the command strunct and sent it to RunPgm.
      */
     char **pl = p->pgmlist;
 
@@ -230,7 +222,7 @@ void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
 
     /* The list is in reversed order (I don't know why- design choice) so print
      * it reversed to get right.
-     * p is the pointer to the last program in the chain of pipes. printPgm calls recursively.
+     * p is the pointer to the last program in the chain of pipes. RunPgm calls recursively.
      * (it is like a postorder print is a tree: first print all the rest of the list recurively then print myself)
      *  printing example: [wc -l]
      */
@@ -247,7 +239,7 @@ void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
         return;
       }
       pipe_left = new_pipe;
-      PrintPgm(p->next, pipe_left, cmd);
+      RunPgm(p->next, pipe_left, cmd);
     }
 
     /*get a copy of the PATH variable*/
@@ -314,9 +306,9 @@ void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
           }
 
           /* background processes must ALSO ignore Ctrl-C ! */
-          /* this does not work... why!? */
           if (cmd->bakground) {
-            signal(SIGINT, ctrl_c_pressed);
+            /* Each background process gets its own new process group */
+            setpgid(pid, 0);
           }
 
           /*execute a program*/
