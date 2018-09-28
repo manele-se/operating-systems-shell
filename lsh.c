@@ -47,6 +47,7 @@ void PrintCommand(int, Command *);
 void PrintPgm(Pgm *, int *pipe_right, Command *cmd);
 void stripwhite(char *);
 void child_terminated();
+void ctrl_c_pressed();
 void run_cd(char *);
 
 /* When non-zero (true), this global means the user is done using this program. */
@@ -70,6 +71,13 @@ int main(void)
    * clean up the child process to avoid zombies
    */
   signal(SIGCHLD, child_terminated);
+
+  /*
+   * Register a callback function to be called automatically each
+   * time Ctrl-C is pressed. That function does nothing! This makes
+   * lsh ignore Ctrl-C.
+   */
+  signal(SIGINT, ctrl_c_pressed);
 
   /*
    * this lopp is the main loop in the program. It runs until the user wants to quit the shell
@@ -289,6 +297,12 @@ void PrintPgm (Pgm *p, int *pipe_right, Command *cmd)
             close(redirect_stdin);
           }
 
+          /* background processes must ALSO ignore Ctrl-C ! */
+          /* this does not work... why!? */
+          if (cmd->bakground) {
+            signal(SIGINT, ctrl_c_pressed);
+          }
+
           /*execute a program*/
           execvp(full_path, pl); 
         }
@@ -393,6 +407,16 @@ void child_terminated() {
         fprintf(stdout, "Process %d exited\n", pid);
       }
     } while (pid > 0);
+}
+
+
+/*
+ * Name: ctrl_c_pressed
+ * 
+ * Is called automatically each time Ctrl-C is pressed.
+ * This function does nothing, so Ctrl-C is ignored!
+ */
+void ctrl_c_pressed() {
 }
 
 /*
