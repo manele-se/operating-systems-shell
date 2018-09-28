@@ -259,8 +259,7 @@ void RunPgm (Pgm *p, int *pipe_right, Command *cmd)
 	    snprintf(full_path, MAX_SIZE, "%s/%s", dir, program_name);
 
       /*if file exists print its location*/
-	    if(access(full_path, F_OK) != -1) {
-		    /*printf("Program found at : %s\n", buff); ATT TA BORT!!!*/
+	    if(access(full_path, R_OK | X_OK) != -1) {
         pid_t pid = fork();
         if(pid < 0){
           fprintf(stderr, "Fork failed");
