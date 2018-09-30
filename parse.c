@@ -25,44 +25,24 @@ static char *pbuf[50], **pp;
 /*
  * A quick hack to parse a commandline
  */
-
-/* Läser från en sträng (buf) som är kommandoraden
- * Fyller på en struct Command med information om kommandoraden
- */
-
 int
 parse (char *buf, Command *c)
 {
   int n;
 
-  /* Pekare till en struct Pgm
-   * Varje Pgm ("program") som ska köras
-   * Till exempel "ls -l" blir ETT "program"
-   */
+
   Pgm *cmd0;
 
-  /* t är en pekare som troligen används för att gå "framåt" i strängen och tolka innehållet */
   char *t = buf;
-  /* tok ingen aning vad det kan vara ännu */
   char *tok;
 
   init();
-  /* Ställer in "standard" värde för:
-   * rstdin  (redirect standard input)  = NULL (ingen redirect)
-   * rstdout (redirect standard output)
-   * rstderr (redirect standard error)
-   * bakground (starta som bakgrundsprocess)
-   * pgm     (program att starta)
-   */
   c->rstdin    = NULL;
   c->rstdout   = NULL;
   c->rstderr   = NULL;
   c->bakground = 0; /* false */
   c->pgm       = NULL;
 
-/* vi pratar om det sen - det här är GAMMAL stil av programmering
- * man kan bryta mot reglerna för loopar, if- och switch-satser genom goto
- */
 newcmd:
   if ((n = acmd(t, &cmd0)) <= 0) {
     return -1;
@@ -134,25 +114,17 @@ newtoken:
 void init( void )
 {
   int i;
-  /* Initierar en array av 19 struct Pgm i en array */
-  /* Så att cmbbuf[0].next pekar på cmbbuf[1],
-            cmbbuf[1].next pekar på cmbbuf[2],
-            cmbbuf[2].next pekar på cmbbuf[3],
-            ...
-            cmbbuf[18].next pekar på cmbbuf[19]
-            */
+
   for (i=0;i<19;i++) {
     cmdbuf[i].next = &cmdbuf[i+1];
   }
 
-  /* Den sista cmbbuf[19].next pekar på ingenting
-   * Det brukar signalera att det inte finns någon "nästa" härifrån
-   */
+  
   cmdbuf[19].next = NULL;
 
   cmds = cmdbuf;
-  cp = cbuf; /* ??? */
-  pp = pbuf; /* ??? */
+  cp = cbuf; 
+  pp = pbuf; 
 }
 
 int
