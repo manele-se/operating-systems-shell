@@ -32,6 +32,8 @@
 void RunCommand(int, Command *);
 int RunPgm(Pgm *, int *pipe_right, Command *cmd);
 void stripwhite(char *);
+void redirect_stdout(int *pipe_right, char *rstdout);
+void redirect_stdin(int *pipe_left, char *rstdin);
 void child_terminated();
 void ctrl_c_pressed();
 void run_cd(char *);
@@ -140,137 +142,97 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
   if (p == NULL) {
     return FALSE;
   }
-  else {
-    /*
-     * pl points to an array of strings where the first one is the name of the program to run and
-     * the rest are the arguments to pass to the program
-     */
-    char **pl = p->pgmlist;
 
-    /*
-     * Check to see if user wants to run a built in command here
-     */
-    if (strcmp("cd", pl[0]) == 0) {
-      /*run the built in command cd, and pass the first parameter */
-      run_cd(pl[1]);
-      return TRUE;
-    }
+  /*
+    * pl points to an array of strings where the first one is the name of the program to run and
+    * the rest are the arguments to pass to the program
+    */
+  char **pl = p->pgmlist;
 
-
-    /*
-     * p is the pointer to the last program in the chain of pipes. RunPgm calls recursively.
-     */
-
-    /* If there is a program to run before this in the pipe chain,
-     * create a new pipe and give it to the program to run before this
-     */
-    int *pipe_left = NULL;
-    int new_pipe[2];
-
-    if (p->next != NULL) {
-      if (pipe(new_pipe) == -1) {
-        fprintf(stderr, "Pipe creation failed!");
-        return FALSE;
-      }
-      pipe_left = new_pipe;
-      if (!RunPgm(p->next, pipe_left, cmd)) {
-        close(pipe_left[0]);
-        close(pipe_left[1]);
-        return FALSE;
-      }
-    }
-
-    /* get the program name*/
-    char *program_name = pl[0];
-
-    pid_t pid = fork();
-    if(pid < 0){
-      fprintf(stderr, "Fork failed");
-      return FALSE;
-    }
-    /*if this is the child process*/
-    else if(pid == 0) {
-      if (pipe_right != NULL) {
-        /* Redirect stdout, if a pipe was sent in from the outside */
-        close(STDOUT_FILENO);
-        dup(pipe_right[WRITE_END]);    
-        close(pipe_right[READ_END]);
-        close(pipe_right[WRITE_END]);
-      }
-      else if (cmd->rstdout != NULL) {
-        /* Redirect stdout to a file if this is the program to
-          * the right and if a filename was given */
-        int redirect_stdout = open(cmd->rstdout, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
-        /* If file could not be created or opened for writing */
-        if (redirect_stdout == -1) {
-          fprintf(stderr, "Could not write to file %s\n", cmd->rstdout);
-          exit(1);
-        }
-        dup2(redirect_stdout, 1);
-        close(redirect_stdout);
-      }
-
-      if (pipe_left != NULL) {
-        /* Redirect stdin, if a new pipe was sent to the program before this */
-        close(STDIN_FILENO);        
-        dup(pipe_left[READ_END]);
-        close(pipe_left[WRITE_END]);
-        close(pipe_left[READ_END]);
-      }
-      else if (cmd->rstdin != NULL) {
-        /* Redirect stdin to a file if this is the program to the
-          * left and if a filename was given */
-        int redirect_stdin = open(cmd->rstdin, O_RDONLY);
-        /* If file could not be created or opened for writing */
-        if (redirect_stdin == -1) {
-          fprintf(stderr, "Could not read from file %s\n", cmd->rstdin);
-          exit(1);
-        }
-        dup2(redirect_stdin, 0);
-        close(redirect_stdin);
-      }
-
-      /* background processes must ignore Ctrl-C */
-      if (cmd->bakground) {
-        /* Each background process gets its own new process group */
-        setpgid(pid, 0);
-      }
-
-      /*execute a program*/
-      if (execvp(program_name, pl) == -1) {
-        fprintf(stderr, "Command not found: %s\n", program_name);
-        if (pipe_left != NULL) {
-          close(pipe_left[READ_END]);
-          close(pipe_left[WRITE_END]);
-        }
-        exit(1);
-      }
-    }
-    else {
-      /* If we have created a new pipe, close it! */
-      if (pipe_left != NULL) {
-        close(pipe_left[READ_END]);
-        close(pipe_left[WRITE_END]);
-      }
-
-      /*check if background task*/
-      if (!cmd->bakground){
-        int wstatus;
-        /* Waits for the recently started child process to exit */
-        waitpid(pid, &wstatus, 0);
-
-        /* If the process exited normally, and with an exit code of 0, meaning all is OK */
-        if (WIFEXITED(wstatus) && WEXITSTATUS(wstatus) == 0) {
-          return TRUE;
-        }
-        else {
-          return FALSE;
-        }
-      }
-    }
-    
+  /*
+    * Check to see if user wants to run a built in command here
+    */
+  if (strcmp("cd", pl[0]) == 0) {
+    /*run the built in command cd, and pass the first parameter */
+    run_cd(pl[1]);
     return TRUE;
   }
+
+
+  /*
+    * p is the pointer to the last program in the chain of pipes. RunPgm calls recursively.
+    */
+
+  /* If there is a program to run before this in the pipe chain,
+    * create a new pipe and give it to the program to run before this
+    */
+  int *pipe_left = NULL;
+  int new_pipe[2];
+
+  if (p->next != NULL) {
+    if (pipe(new_pipe) == -1) {
+      fprintf(stderr, "Pipe creation failed!");
+      return FALSE;
+    }
+    pipe_left = new_pipe;
+    if (!RunPgm(p->next, pipe_left, cmd)) {
+      close(pipe_left[READ_END]);
+      close(pipe_left[WRITE_END]);
+      return FALSE;
+    }
+  }
+
+  /* get the program name*/
+  char *program_name = pl[0];
+
+  /* Create a child process */
+  pid_t pid = fork();
+
+  if(pid < 0){
+    fprintf(stderr, "Fork failed");
+    return FALSE;
+  }
+  /*if this is the child process*/
+  else if(pid == 0) {
+    redirect_stdout(pipe_right, cmd->rstdout);
+    redirect_stdin(pipe_left, cmd->rstdin);
+
+    /* background processes must ignore Ctrl-C */
+    if (cmd->bakground) {
+      /* Each background process gets its own new process group */
+      setpgid(pid, 0);
+    }
+
+    /*execute a program*/
+    if (execvp(program_name, pl) == -1) {
+      fprintf(stderr, "Command not found: %s\n", program_name);
+      exit(1);
+    }
+  }
+  else {
+    /* If we have created a new pipe, close it! */
+    if (pipe_left != NULL) {
+      close(pipe_left[READ_END]);
+      close(pipe_left[WRITE_END]);
+    }
+
+    /*check if foreground task*/
+    if (!cmd->bakground){
+      int wstatus;
+      /* Waits for the recently started child process to exit */
+      waitpid(pid, &wstatus, 0);
+
+      /* If the process exited normally, and with an exit code of 0, meaning all is OK */
+      if (WIFEXITED(wstatus) && WEXITSTATUS(wstatus) == 0) {
+        return TRUE;
+      }
+      else {
+        return FALSE;
+      }
+    }
+  }
+  
+  return TRUE;
 }
 
 /*
@@ -296,6 +258,56 @@ void stripwhite (char *string)
   }
 
   string [++i] = '\0';
+}
+
+/*
+ * This function redirects stdout either to a pipe or to a named file
+ */
+void redirect_stdout(int *pipe_right, char *rstdout) {
+  if (pipe_right != NULL) {
+    /* Redirect stdout, if a pipe was sent in from the outside */
+    close(STDOUT_FILENO);
+    dup(pipe_right[WRITE_END]);    
+    close(pipe_right[READ_END]);
+    close(pipe_right[WRITE_END]);
+  }
+  else if (rstdout != NULL) {
+    /* Redirect stdout to a file if this is the program to
+      * the right and if a filename was given */
+    int redirect_stdout = open(rstdout, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
+    /* If file could not be created or opened for writing */
+    if (redirect_stdout == -1) {
+      fprintf(stderr, "Could not write to file %s\n", rstdout);
+      exit(1);
+    }
+    dup2(redirect_stdout, 1);
+    close(redirect_stdout);
+  }
+}
+
+/*
+ * This function redirects stdin either to a pipe or to a named file
+ */
+void redirect_stdin(int *pipe_left, char *rstdin) {
+  if (pipe_left != NULL) {
+    /* Redirect stdin, if a new pipe was sent to the program before this */
+    close(STDIN_FILENO);        
+    dup(pipe_left[READ_END]);
+    close(pipe_left[WRITE_END]);
+    close(pipe_left[READ_END]);
+  }
+  else if (rstdin != NULL) {
+    /* Redirect stdin to a file if this is the program to the
+      * left and if a filename was given */
+    int redirect_stdin = open(rstdin, O_RDONLY);
+    /* If file could not be created or opened for writing */
+    if (redirect_stdin == -1) {
+      fprintf(stderr, "Could not read from file %s\n", rstdin);
+      exit(1);
+    }
+    dup2(redirect_stdin, 0);
+    close(redirect_stdin);
+  }
 }
 
 
