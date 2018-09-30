@@ -44,7 +44,7 @@
  * Function declarations
  */
 void RunCommand(int, Command *);
-void RunPgm(Pgm *, int *pipe_right, Command *cmd);
+int RunPgm(Pgm *, int *pipe_right, Command *cmd);
 void stripwhite(char *);
 void child_terminated();
 void ctrl_c_pressed();
@@ -183,13 +183,13 @@ void RunCommand (int n, Command *cmd)
  * Om pipe är NULL är detta "sista" programmet i pipe-kedjan.
  *
  */
-void RunPgm (Pgm *p, int *pipe_right, Command *cmd)
+int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
 {
   /*
    *  if there is no information about the program, do nothing
    */
   if (p == NULL) {
-    return;
+    return FALSE;
   }
   else {
     /*
@@ -212,7 +212,7 @@ void RunPgm (Pgm *p, int *pipe_right, Command *cmd)
     if (strcmp("cd", pl[0]) == 0) {
       /*run the built in command cd, and pass the first parameter */
       run_cd(pl[1]);
-      return;
+      return TRUE;
     }
 
 
@@ -237,10 +237,12 @@ void RunPgm (Pgm *p, int *pipe_right, Command *cmd)
     if (p->next != NULL) {
       if (pipe(new_pipe) == -1) {
         fprintf(stderr, "Pipe creation failed!");
-        return;
+        return FALSE;
       }
       pipe_left = new_pipe;
-      RunPgm(p->next, pipe_left, cmd);
+      if (!RunPgm(p->next, pipe_left, cmd)) {
+        return FALSE;
+      }
     }
 
     /*get a copy of the PATH variable*/
@@ -264,7 +266,8 @@ void RunPgm (Pgm *p, int *pipe_right, Command *cmd)
         pid_t pid = fork();
         if(pid < 0){
           fprintf(stderr, "Fork failed");
-          return;
+          free(all_path);
+          return FALSE;
         }/*if this is the child process*/
         else if(pid ==0) {
           if (pipe_right != NULL) {
@@ -280,7 +283,8 @@ void RunPgm (Pgm *p, int *pipe_right, Command *cmd)
             /* If file could not be created or opened for writing */
             if (redirect_stdout == -1) {
               fprintf(stderr, "Could not write to file %s\n", cmd->rstdout);
-              return;
+              free(all_path);
+              return FALSE;
             }
             dup2(redirect_stdout, 1);
             close(redirect_stdout);
@@ -299,7 +303,8 @@ void RunPgm (Pgm *p, int *pipe_right, Command *cmd)
             /* If file could not be created or opened for writing */
             if (redirect_stdin == -1) {
               fprintf(stderr, "Could not read from file %s\n", cmd->rstdin);
-              return;
+              free(all_path);
+              return FALSE;
             }
             dup2(redirect_stdin, 0);
             close(redirect_stdin);
@@ -312,7 +317,10 @@ void RunPgm (Pgm *p, int *pipe_right, Command *cmd)
           }
 
           /*execute a program*/
-          execvp(full_path, pl);
+          if (execvp(full_path, pl) == -1) {
+            free(all_path);
+            return FALSE;
+          }
         }
         else{
           /* If we have created a new pipe, close it! */
@@ -322,7 +330,7 @@ void RunPgm (Pgm *p, int *pipe_right, Command *cmd)
           /*check if background task*/
           }
           if (!cmd->bakground){
-              wait(NULL);
+            wait(NULL);
           }
         }
 		    found = TRUE;
@@ -330,12 +338,14 @@ void RunPgm (Pgm *p, int *pipe_right, Command *cmd)
 
       dir = strtok (NULL, ":") ;
     }
+    
     if (! found){
       printf("Command not found: %s\n", program_name);
+      free(all_path);
+      return FALSE;
     }
     free(all_path);
-
-
+    return TRUE;
   }
 }
 
