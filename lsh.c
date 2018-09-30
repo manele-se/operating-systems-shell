@@ -1,24 +1,13 @@
 /*
- * Main source code file for lsh shell program
- *
- * You are free to add functions to this file.
- * If you want to add functions in a separate file
- * you will need to modify Makefile to compile
- * your additional functions.
- *
- * Add appropriate comments in your code to make it
- * easier for us while grading your assignment.
  *
  * Submit the entire lab1 folder as a tar archive (.tgz).
  * Command to create submission archive:
       $> tar cvf lab1.tgz lab1/
- *
- * All the best
  */
 
 /*
  * Elena Marzi and Johannes Magnusson
- * 2018-09-?
+ * 2018-09-30
  */
 
 #include <stdio.h>
@@ -40,9 +29,6 @@
 #define READ_END 0
 #define WRITE_END 1
 
-/*
- * Function declarations
- */
 void RunCommand(int, Command *);
 int RunPgm(Pgm *, int *pipe_right, Command *cmd);
 void stripwhite(char *);
@@ -74,33 +60,18 @@ int main(void)
 
   /*
    * Register a callback function to be called automatically each
-   * time Ctrl-C is pressed. That function does nothing! This makes
-   * lsh ignore Ctrl-C.
+   * time Ctrl-C is pressed.
    */
   signal(SIGINT, ctrl_c_pressed);
 
-  /*
-   * this lopp is the main loop in the program. It runs until the user wants to quit the shell
-   */
   while (!done) {
-
     char *line;
-
-    /*
-     * readline prints a prompt and then reads and returns a single line of text from the user
-     * that is stored in 'line'
-     */
     line = readline("> ");
 
     /*
-     * If we've have reached the end of the input stream (if (line == NULL) )-> if line points to null
-     * (there is no place in memory where a string could be)
-     * the input stream can be the input from the keyboard or from a file.
      * readline returns NULL if stream reaches the end.
-     * In C stream is called stdin
      */
     if (!line) {
-      /* Encountered EOF at top level */
       /*Set done to 1 (true) --> stop the while loop */
       done = 1;
     }
@@ -108,52 +79,31 @@ int main(void)
     else {
       /*
        * Remove leading and trailing whitespace from the line
-       * Then, if there is anything left, add it to the history list
-       * and execute it.
-       * stripwhite is defined further down*/
+       */
       stripwhite(line);
 
       /*
-       * line is apointer to a array of char in memory.
-       * if string is not empty (if(line[0] != '\0')) -> if the first position in the array
-       * is not the end of the string (there is a  place in memory for a string but it is empty!)
+       * if string is not empty
        */
-      if(*line) {
-        /*
-         * This is a command to show what the use has typed before.
-         * If you want the user to be able to get at the line later, (with C-p for example), you must
-         * call add_history() to save the line away in a history list of such lines.
-         */
+      if(line[0] != '\0') {
         add_history(line);
 
         /*
-        * execute it
-        * TO DO!
         * parse(..) interprets a string the user has typed and create a structure representation in the cmd structure
-        * parse is defined in parse.c
-         */
+        */
         n = parse(line, &cmd);
 
-/*The build in function 'exit'*/
-if (strcmp(cmd.pgm->pgmlist[0], "exit") == 0) { /*Checks if the first argument is equal to the string 'exit' */
-        //kill(0, SIGKILL); /*If pid (1st argument) is equals 0, then sig (2nd argument) is sent to every process in the process group
-        //                  of the calling process. The SIGKILL signal is used to cause immediate program termination */
-        exit(0); /*Arg: status code. 0 -> execution succeeded completely */
-        done = 1;
-}
-
-
+        /*The build in function 'exit'*/
+        /*Checks if the first argument is equal to the string 'exit' */
+        if (strcmp(cmd.pgm->pgmlist[0], "exit") == 0) { 
+          exit(0);
+        }
 
         RunCommand(n, &cmd);
       }
     }
 
-    /*
-     * If (line != NULL) -> if readline return a pointer to a string, free memory.
-     * readline allocate memory and main  must free it!
-     */
-    if(line) {
-      /* deallocates the memory previously allocated*/
+    if(line != NULL) {
       free(line);
     }
   }
@@ -179,9 +129,8 @@ void RunCommand (int n, Command *cmd)
  *
  * Description: Runs a list of Pgm:s.
  * It takes a pointer to a program and runs it.
- * Funktionen tar också en pipe (två integers)
- * Om pipe är NULL är detta "sista" programmet i pipe-kedjan.
- *
+ * It also takes an array of file descriptors for a pipe.
+ * If pipe is NULL, this is the program to the far right of the pipe chain
  */
 int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
 {
@@ -194,20 +143,12 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
   else {
     /*
      * pl points to an array of strings where the first one is the name of the program to run and
-     * the rest are the arguments to pass to the programm
-     * (!! in C a string is an pointer to the first charater to the string  that it means that
-     * there is an array in which each element is pointer to a char, this is why there is dubbelpointer
-     * -->char * * is like a String[] in Java)
-     * p->pgmlist:  is that array given by the parse function. Parser fills the command struct, RunCommand
-     * takes the pgm part of the command strunct and sent it to RunPgm.
+     * the rest are the arguments to pass to the program
      */
     char **pl = p->pgmlist;
 
-    /* Check to see if user wants to run a built in command here
-     * We can't do this earlier because this is where we get
-     * the program name and arguments (the pl array)
-     * We can't do this later because built in commands should
-     * not be handling pipes, redirection, background ...
+    /*
+     * Check to see if user wants to run a built in command here
      */
     if (strcmp("cd", pl[0]) == 0) {
       /*run the built in command cd, and pass the first parameter */
@@ -216,16 +157,8 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
     }
 
 
-
-
-
-
-
-    /* The list is in reversed order (I don't know why- design choice) so print
-     * it reversed to get right.
+    /*
      * p is the pointer to the last program in the chain of pipes. RunPgm calls recursively.
-     * (it is like a postorder print is a tree: first print all the rest of the list recurively then print myself)
-     *  printing example: [wc -l]
      */
 
     /* If there is a program to run before this in the pipe chain,
@@ -272,13 +205,14 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
         else if(pid ==0) {
           if (pipe_right != NULL) {
             /* Redirect stdout, if a pipe was sent in from the outside */
-            close(STDOUT_FILENO);       // Close stdout
-            dup(pipe_right[WRITE_END]);    // Replace stdout with a copy of the received pipe
-            close(pipe_right[READ_END]);   // Close the pipe
+            close(STDOUT_FILENO);
+            dup(pipe_right[WRITE_END]);    
+            close(pipe_right[READ_END]);
             close(pipe_right[WRITE_END]);
           }
           else if (cmd->rstdout != NULL) {
-            /* Redirect stdout if this is the program to the right and if a filename was given */
+            /* Redirect stdout to a file if this is the program to
+             * the right and if a filename was given */
             int redirect_stdout = open(cmd->rstdout, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
             /* If file could not be created or opened for writing */
             if (redirect_stdout == -1) {
@@ -292,13 +226,14 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
 
           if (pipe_left != NULL) {
             /* Redirect stdin, if a new pipe was sent to the program before this */
-            close(STDIN_FILENO);        // Close stdin
-            dup(pipe_left[READ_END]);     // Replace stdin with a copy of the new pipe
-            close(pipe_left[WRITE_END]);  // Close the pipe
+            close(STDIN_FILENO);        
+            dup(pipe_left[READ_END]);
+            close(pipe_left[WRITE_END]);
             close(pipe_left[READ_END]);
           }
           else if (cmd->rstdin != NULL) {
-            /* Redirect stdin if this is the program to the left and if a filename was given */
+            /* Redirect stdin to a file if this is the program to the
+             * left and if a filename was given */
             int redirect_stdin = open(cmd->rstdin, O_RDONLY);
             /* If file could not be created or opened for writing */
             if (redirect_stdin == -1) {
@@ -310,7 +245,7 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
             close(redirect_stdin);
           }
 
-          /* background processes must ALSO ignore Ctrl-C ! */
+          /* background processes must ignore Ctrl-C */
           if (cmd->bakground) {
             /* Each background process gets its own new process group */
             setpgid(pid, 0);
@@ -327,8 +262,9 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
           if (pipe_left != NULL) {
             close(pipe_left[0]);
             close(pipe_left[1]);
-          /*check if background task*/
           }
+
+          /*check if background task*/
           if (!cmd->bakground){
             wait(NULL);
           }
@@ -357,44 +293,20 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
 void stripwhite (char *string)
 {
   register int i = 0;
-/*
- * isspace(int c) checks whether the passed character is white-space.
- * This function returns a non-zero  value(true) if c is a white-space character
- * else, zero (false)
- * Here: move i foward as long as there are spaces. After the loop, i is the index of hte first non-space
- * character.
- */
+
   while (isspace( string[i] )) {
     i++;
   }
 
- /*
-  * i is the index of the array
-  * if (i > 0) ->if i has moved foward more than zero steps, copy the string from string+i to string.
-  * That is means that we move the relevant part of the string to the beginning of the string
-  * [_ _ _ cat -l] --> [cat -l]
-  */
   if (i) {
     strcpy (string, string + i);
   }
 
-  /*
-   * Now we have a command in string whiout leading whitespace.
-   * Here are trailing white space removed.
-   *  strlen return length of the string. Result of the function get substahacted by 1.
-   * t.e.x strlen return 12: it means that there is 12 character in the string.
-   * the first index is always 0. The last is always length -1. (11).
-   * i = 11 in the exampel.
-   * in the loop: as long as there is a whitespace at position i, substahact i with 1
-   */
   i = strlen( string ) - 1;
   while (i > 0 && isspace (string[i])) {
     i--;
   }
- /*
-  * now i is the index of the last non space character.
-  * i increased by 1 and set an string terminator in that position
-  */
+
   string [++i] = '\0';
 }
 
@@ -418,10 +330,6 @@ void child_terminated() {
       pid = wait3(&exit_status, WNOHANG, NULL);
 
       if (pid > 0) {
-        /*
-         * Here we could also print the exit code which
-         * is in some 8 bits of the exit_status
-         */
         fprintf(stdout, "Process %d exited\n", pid);
       }
     } while (pid > 0);
