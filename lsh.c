@@ -174,113 +174,101 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
       }
       pipe_left = new_pipe;
       if (!RunPgm(p->next, pipe_left, cmd)) {
+        close(pipe_left[0]);
+        close(pipe_left[1]);
         return FALSE;
       }
     }
 
-    /*get a copy of the PATH variable*/
-    char *path = getenv("PATH");
-    char *all_path = strdup(path);
-    char  full_path [MAX_SIZE];
-
     /* get the program name*/
     char *program_name = pl[0];
 
-    /*tokanize */
-    char *dir = strtok(all_path, ":");
-    int found = FALSE;
-
-    /* as long as there are more path to look in and program is not found*/
-    while (dir != NULL && !found) {
-	    snprintf(full_path, MAX_SIZE, "%s/%s", dir, program_name);
-
-      /*if file exists print its location*/
-	    if(access(full_path, R_OK | X_OK) != -1) {
-        pid_t pid = fork();
-        if(pid < 0){
-          fprintf(stderr, "Fork failed");
-          free(all_path);
-          return FALSE;
-        }/*if this is the child process*/
-        else if(pid ==0) {
-          if (pipe_right != NULL) {
-            /* Redirect stdout, if a pipe was sent in from the outside */
-            close(STDOUT_FILENO);
-            dup(pipe_right[WRITE_END]);    
-            close(pipe_right[READ_END]);
-            close(pipe_right[WRITE_END]);
-          }
-          else if (cmd->rstdout != NULL) {
-            /* Redirect stdout to a file if this is the program to
-             * the right and if a filename was given */
-            int redirect_stdout = open(cmd->rstdout, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
-            /* If file could not be created or opened for writing */
-            if (redirect_stdout == -1) {
-              fprintf(stderr, "Could not write to file %s\n", cmd->rstdout);
-              free(all_path);
-              return FALSE;
-            }
-            dup2(redirect_stdout, 1);
-            close(redirect_stdout);
-          }
-
-          if (pipe_left != NULL) {
-            /* Redirect stdin, if a new pipe was sent to the program before this */
-            close(STDIN_FILENO);        
-            dup(pipe_left[READ_END]);
-            close(pipe_left[WRITE_END]);
-            close(pipe_left[READ_END]);
-          }
-          else if (cmd->rstdin != NULL) {
-            /* Redirect stdin to a file if this is the program to the
-             * left and if a filename was given */
-            int redirect_stdin = open(cmd->rstdin, O_RDONLY);
-            /* If file could not be created or opened for writing */
-            if (redirect_stdin == -1) {
-              fprintf(stderr, "Could not read from file %s\n", cmd->rstdin);
-              free(all_path);
-              return FALSE;
-            }
-            dup2(redirect_stdin, 0);
-            close(redirect_stdin);
-          }
-
-          /* background processes must ignore Ctrl-C */
-          if (cmd->bakground) {
-            /* Each background process gets its own new process group */
-            setpgid(pid, 0);
-          }
-
-          /*execute a program*/
-          if (execvp(full_path, pl) == -1) {
-            free(all_path);
-            return FALSE;
-          }
-        }
-        else{
-          /* If we have created a new pipe, close it! */
-          if (pipe_left != NULL) {
-            close(pipe_left[0]);
-            close(pipe_left[1]);
-          }
-
-          /*check if background task*/
-          if (!cmd->bakground){
-            wait(NULL);
-          }
-        }
-		    found = TRUE;
-      }
-
-      dir = strtok (NULL, ":") ;
-    }
-    
-    if (! found){
-      printf("Command not found: %s\n", program_name);
-      free(all_path);
+    pid_t pid = fork();
+    if(pid < 0){
+      fprintf(stderr, "Fork failed");
       return FALSE;
     }
-    free(all_path);
+    /*if this is the child process*/
+    else if(pid == 0) {
+      if (pipe_right != NULL) {
+        /* Redirect stdout, if a pipe was sent in from the outside */
+        close(STDOUT_FILENO);
+        dup(pipe_right[WRITE_END]);    
+        close(pipe_right[READ_END]);
+        close(pipe_right[WRITE_END]);
+      }
+      else if (cmd->rstdout != NULL) {
+        /* Redirect stdout to a file if this is the program to
+          * the right and if a filename was given */
+        int redirect_stdout = open(cmd->rstdout, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
+        /* If file could not be created or opened for writing */
+        if (redirect_stdout == -1) {
+          fprintf(stderr, "Could not write to file %s\n", cmd->rstdout);
+          exit(1);
+        }
+        dup2(redirect_stdout, 1);
+        close(redirect_stdout);
+      }
+
+      if (pipe_left != NULL) {
+        /* Redirect stdin, if a new pipe was sent to the program before this */
+        close(STDIN_FILENO);        
+        dup(pipe_left[READ_END]);
+        close(pipe_left[WRITE_END]);
+        close(pipe_left[READ_END]);
+      }
+      else if (cmd->rstdin != NULL) {
+        /* Redirect stdin to a file if this is the program to the
+          * left and if a filename was given */
+        int redirect_stdin = open(cmd->rstdin, O_RDONLY);
+        /* If file could not be created or opened for writing */
+        if (redirect_stdin == -1) {
+          fprintf(stderr, "Could not read from file %s\n", cmd->rstdin);
+          exit(1);
+        }
+        dup2(redirect_stdin, 0);
+        close(redirect_stdin);
+      }
+
+      /* background processes must ignore Ctrl-C */
+      if (cmd->bakground) {
+        /* Each background process gets its own new process group */
+        setpgid(pid, 0);
+      }
+
+      /*execute a program*/
+      if (execvp(program_name, pl) == -1) {
+        fprintf(stderr, "Command not found: %s\n", program_name);
+        if (pipe_left != NULL) {
+          close(pipe_left[READ_END]);
+          close(pipe_left[WRITE_END]);
+        }
+        exit(1);
+      }
+    }
+    else {
+      /* If we have created a new pipe, close it! */
+      if (pipe_left != NULL) {
+        close(pipe_left[READ_END]);
+        close(pipe_left[WRITE_END]);
+      }
+
+      /*check if background task*/
+      if (!cmd->bakground){
+        int wstatus;
+        /* Waits for the recently started child process to exit */
+        waitpid(pid, &wstatus, 0);
+
+        /* If the process exited normally, and with an exit code of 0, meaning all is OK */
+        if (WIFEXITED(wstatus) && WEXITSTATUS(wstatus) == 0) {
+          return TRUE;
+        }
+        else {
+          return FALSE;
+        }
+      }
+    }
+    
     return TRUE;
   }
 }
