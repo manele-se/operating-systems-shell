@@ -27,6 +27,17 @@ https://linux.die.net/man/3/execlp,
 https://docs.oracle.com/cd/E19455-01/806-4750/signals-7/index.html
 https://stackoverflow.com/questions/13801175/classic-c-using-pipes-in-execvp-function-stdin-and-stdout-redirection
 http://www.cs.loyola.edu/~jglenn/702/S2005/Examples/dup2.html
+ftp://ftp.gnu.org/old-gnu/Manuals/glibc-2.2.3/html_chapter/libc_24.html
+https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.1.0/com.ibm.zos.v2r1.bpxbd00/rtwaip.htm
+
+Books:
+- Vägen till C (Jan Skansholm)
+- Effektivare Linux - Kom igång med kommandoraden (Gareth Anderson
+  Tobias Hagberg)
+- A Practical Guide to Linux Commands, Editors, and Shell Programming (Mark G. Sobell)
+
+Other:
+- Lecture slides (EDA093 Operativsystem H18)
 
 			   COMMAND SHELL
 			   =============
@@ -41,12 +52,18 @@ which parts.
    Make sure that each member's total time is listed.
 
    Elena: 48 hours
+   Johannes: 45 hours 
 
 >> L2: What did each team member focus on for this assignment?  Keep
    descriptions to 25-30 words or less.
 
    Elena: we did not have a clear division of labour. We worked on each task sequentially based on a Trello board. 
    The one who was done with a task started the next one. 
+   
+   Johannes: 
+   We started out commenting the code and then we divided the assignment 
+   into user stories and tasks... But as Elena mentioned, we didn't have
+   a clear division of labour. 
 
 
 			  SURVEY QUESTIONS
@@ -63,10 +80,19 @@ penalized.  We can't fix things until we know about them.  :-)
 
 It was quiet hard to understand the code and each task. It took a lot of time. 
 
+I think this is the most difficult assignment (so far ) that I've worked on 
+during my time at Chalmers. I wish I had better knowledge in C programming. 
+Especially pointers.   
+
+
+
 >> Did you find that working on a particular part of the assignment gave
 >> you greater insight into some aspect of OS design?
 
 create processes and pipes
+
+
+
 
 >> Were there any parts of the assignment that you felt were unnecessarily
 >> tedious or pointless?

@@ -170,12 +170,15 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
   int *pipe_left = NULL;
   int new_pipe[2];
 
+  /*if there is at least one more program to the left of this program, create a pipe*/
   if (p->next != NULL) {
+    /*if the creation of a new pipe fails*/ 
     if (pipe(new_pipe) == -1) {
       fprintf(stderr, "Pipe creation failed!");
       return FALSE;
     }
     pipe_left = new_pipe;
+    /*if the program to the left fails, close the pipe without running the current program*/
     if (!RunPgm(p->next, pipe_left, cmd)) {
       close(pipe_left[READ_END]);
       close(pipe_left[WRITE_END]);
@@ -195,7 +198,9 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
   }
   /*if this is the child process*/
   else if(pid == 0) {
+    /*output from this program might be redirected*/
     redirect_stdout(pipe_right, cmd->rstdout);
+    /*input to this program might be redirected*/
     redirect_stdin(pipe_left, cmd->rstdin);
 
     /* background processes must ignore Ctrl-C */
@@ -210,9 +215,10 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
       exit(0);
     }
 
-    /* execute a program*/
+    /*execute a program, find it in the PATH variable. If something is wrong returns -1*/
     if (execvp(program_name, pl) == -1) {
       fprintf(stderr, "Command not found: %s\n", program_name);
+      /*exit the child process*/
       exit(1);
     }
   }
@@ -272,21 +278,24 @@ void stripwhite (char *string)
  */
 void redirect_stdout(int *pipe_right, char *rstdout) {
   if (pipe_right != NULL) {
-    /* Redirect stdout, if a pipe was sent in from the outside */
+    /* Redirect stdout (close it) to a pipe*/
     close(STDOUT_FILENO);
+    /*connect the write end of the pipe to stdout for this process*/
     dup(pipe_right[WRITE_END]);    
     close(pipe_right[READ_END]);
     close(pipe_right[WRITE_END]);
   }
   else if (rstdout != NULL) {
-    /* Redirect stdout to a file if this is the program to
-      * the right and if a filename was given */
+    /* Redirect stdout to a file if this is the program to the right.
+    *  Open a file for writing, truncate if the file exists, create if not.
+    *  Set the security bits*/
     int redirect_stdout = open(rstdout, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
     /* If file could not be created or opened for writing */
     if (redirect_stdout == -1) {
       fprintf(stderr, "Could not write to file %s\n", rstdout);
       exit(1);
     }
+    /*connect the created file to the redirected stdout for this porcess*/
     dup2(redirect_stdout, 1);
     close(redirect_stdout);
   }
@@ -297,15 +306,14 @@ void redirect_stdout(int *pipe_right, char *rstdout) {
  */
 void redirect_stdin(int *pipe_left, char *rstdin) {
   if (pipe_left != NULL) {
-    /* Redirect stdin, if a new pipe was sent to the program before this */
+    /*close the stdin stream and substitute it with the output end of the pipe */
     close(STDIN_FILENO);        
     dup(pipe_left[READ_END]);
     close(pipe_left[WRITE_END]);
     close(pipe_left[READ_END]);
   }
   else if (rstdin != NULL) {
-    /* Redirect stdin to a file if this is the program to the
-      * left and if a filename was given */
+    /* Redirect stdin to a file if this is the program to the left */
     int redirect_stdin = open(rstdin, O_RDONLY);
     /* If file could not be created or opened for writing */
     if (redirect_stdin == -1) {
@@ -332,10 +340,9 @@ void child_terminated() {
      */
     do {
       /*
-       * Check if there is a child process that is terminated
+       * Check if there is a child process that is terminated and clean up all the zombies
        */
       pid = wait3(&exit_status, WNOHANG, NULL);
-
       if (pid > 0) {
         fprintf(stdout, "Process %d exited\n", pid);
       }
@@ -359,7 +366,9 @@ void ctrl_c_pressed() {
  */
 void run_cd(char *directory) {
   if (directory == NULL) {
-    /* cd without an arguments changes directory to the user's HOME directory */
+    /* cd without an arguments changes directory to the user's HOME directory
+     * chdir is a system call that changes the current directory
+     * getenv is a system call that reads the value of the system variable */
     chdir(getenv("HOME"));
   }
   else {
