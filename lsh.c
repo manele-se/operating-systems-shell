@@ -150,9 +150,10 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
   char **pl = p->pgmlist;
 
   /*
-    * Check to see if user wants to run a built in command here
+    * Check to see if user wants to run a built in command here, but only
+    * really run it if this is the ONLY program in a pipe chain
     */
-  if (strcmp("cd", pl[0]) == 0) {
+  if (strcmp("cd", pl[0]) == 0 && pipe_right == NULL && p->next == NULL) {
     /*run the built in command cd, and pass the first parameter */
     run_cd(pl[1]);
     return TRUE;
@@ -203,7 +204,13 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
       setpgid(pid, 0);
     }
 
-    /*execute a program*/
+    /* execute a built-in command in a pipe chain */
+    if (strcmp("cd", pl[0]) == 0) {
+      run_cd(pl[1]);
+      exit(0);
+    }
+
+    /* execute a program*/
     if (execvp(program_name, pl) == -1) {
       fprintf(stderr, "Command not found: %s\n", program_name);
       exit(1);
@@ -222,8 +229,8 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
       /* Waits for the recently started child process to exit */
       waitpid(pid, &wstatus, 0);
 
-      /* If the process exited normally, and with an exit code of 0, meaning all is OK */
-      if (WIFEXITED(wstatus) && WEXITSTATUS(wstatus) == 0) {
+      /* If the process exited normally, all is OK (but we don't care about the exit code) */
+      if (WIFEXITED(wstatus)) {
         return TRUE;
       }
       else {
