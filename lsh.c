@@ -124,6 +124,25 @@ void RunCommand (int n, Command *cmd)
    * this runs all programs and arguments to run and pipe together
    */
   RunPgm(cmd->pgm, NULL, cmd);
+  
+  /*check if foreground task*/
+  if (!cmd->bakground){
+    int wstatus, i;
+    /* Waits for the recently started child processes to exit */
+    int count = 0;
+    Pgm *wait_pgm = cmd->pgm;
+    while (wait_pgm != NULL) {
+//      fprintf(stderr, "\x1b[31mWaiting for process %s to finish\x1b[m\n", wait_pgm->pgmlist[0]);
+      wait_pgm = wait_pgm->next;
+      ++count;
+    }
+
+//    fprintf(stderr, "\x1b[31mWaiting for %d processes...\x1b[m\n", count);
+    for (i = 0; i < count; i++) {
+      pid_t pid = waitpid(0, &wstatus, 0);
+//      fprintf(stderr, "\x1b[32mProcess %d finished!\x1b[m\n", pid);
+    }
+  }
 }
 
 /*
@@ -227,21 +246,6 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
     if (pipe_left != NULL) {
       close(pipe_left[READ_END]);
       close(pipe_left[WRITE_END]);
-    }
-
-    /*check if foreground task*/
-    if (!cmd->bakground && pipe_right == NULL){
-      int wstatus;
-      /* Waits for the recently started child process to exit */
-      waitpid(pid, &wstatus, 0);
-
-      /* If the process exited normally, all is OK (but we don't care about the exit code) */
-      if (WIFEXITED(wstatus)) {
-        return TRUE;
-      }
-      else {
-        return FALSE;
-      }
     }
   }
   
