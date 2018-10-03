@@ -210,7 +210,7 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
     }
 
     /* execute a built-in command in a pipe chain */
-    if (strcmp("cd", pl[0]) == 0) {
+    if (strcmp("cd", program_name) == 0) {
       run_cd(pl[1]);
       exit(0);
     }
@@ -230,7 +230,7 @@ int RunPgm (Pgm *p, int *pipe_right, Command *cmd)
     }
 
     /*check if foreground task*/
-    if (!cmd->bakground){
+    if (!cmd->bakground && pipe_right == NULL){
       int wstatus;
       /* Waits for the recently started child process to exit */
       waitpid(pid, &wstatus, 0);
