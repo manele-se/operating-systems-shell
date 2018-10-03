@@ -41,6 +41,10 @@ void run_cd(char *);
 /* When non-zero (true), this global means the user is done using this program. */
 int done = 0;
 
+/* When TRUE, lsh is in the phase of waiting for foreground process(-es) to finish.
+ * Then SIGCHLD should be ignored, so it doesn't disturb the waiting */
+int waiting = FALSE;
+
 /*
  * Description: main function. It reads a command from the keyboard and start those programs
  * that the user typed
@@ -128,20 +132,27 @@ void RunCommand (int n, Command *cmd)
   /*check if foreground task*/
   if (!cmd->bakground){
     int wstatus, i;
-    /* Waits for the recently started child processes to exit */
+    waiting = TRUE;
+
+    /* Wait for the recently started child process(-es) to exit */
+
+    /* First count the number of processes to wait for */
     int count = 0;
     Pgm *wait_pgm = cmd->pgm;
     while (wait_pgm != NULL) {
-//      fprintf(stderr, "\x1b[31mWaiting for process %s to finish\x1b[m\n", wait_pgm->pgmlist[0]);
       wait_pgm = wait_pgm->next;
       ++count;
     }
 
-//    fprintf(stderr, "\x1b[31mWaiting for %d processes...\x1b[m\n", count);
+    /* Then wait the right number of times */
     for (i = 0; i < count; i++) {
       pid_t pid = waitpid(0, &wstatus, 0);
-//      fprintf(stderr, "\x1b[32mProcess %d finished!\x1b[m\n", pid);
     }
+
+    waiting = FALSE;
+
+    /* Give child processes a chance to get cleaned up */
+    child_terminated();
   }
 }
 
@@ -339,10 +350,14 @@ void child_terminated() {
 		int exit_status;
     pid_t pid;
 
+    /* If we are waiting for foreground processes to quit, ignore background processes, for now */
+    if (waiting) return;
+    
     /*
      * loop as long as it finds more terminated child processes
      */
     do {
+
       /*
        * Check if there is a child process that is terminated and clean up all the zombies
        */
