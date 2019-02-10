@@ -6,7 +6,7 @@
  */
 
 /*
- * Elena Marzi and Johannes Magnusson
+ * Elena Marzi 
  * 2018-09-30
  */
 
